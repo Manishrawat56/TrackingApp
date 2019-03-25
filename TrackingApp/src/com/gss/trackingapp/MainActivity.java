@@ -1,15 +1,11 @@
 package com.gss.trackingapp;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.RandomAccessFile;
-import java.text.DecimalFormat;
-import java.util.ArrayList;
-import java.util.List;
+import com.gss.trackingapp.model.StaticDeviceInfo;
+import com.gss.trackingapp.service.MyService;
 
 import android.app.Activity;
 import android.app.ActivityManager;
-import android.app.ActivityManager.MemoryInfo;
+import android.app.ActivityManager.RunningServiceInfo;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -19,84 +15,134 @@ import android.net.NetworkInfo;
 import android.os.BatteryManager;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
-import android.os.StatFs;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.widget.ListView;
+import android.view.View;
 import android.widget.TextView;
 
 public class MainActivity extends Activity {
-TextView infoView;
+TextView deviceInfo,ramInfo,internalMemoryInfo,externalMemoryInfo,cpuInfo;
+private IntentFilter mIntentFilter;
+public static final String mBroadcastStringAction = "com.gss.info";
+public static final String DATA_CPU = "cpu";
+public static final String DATA_RAM = "ram";
+public static final String DATA_INTERNAL = "internal";
+public static final String DATA_EXTERNAL = "external";
+final static String URL = "http://localhost:8080/devceManager/staticDetails.htm";
 StringBuilder sb=new StringBuilder();
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 		this.registerReceiver(this.mBatInfoReceiver, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
-		infoView=(TextView)findViewById(R.id.info);
+		cpuInfo=(TextView)findViewById(R.id.cpu);
+		ramInfo=(TextView)findViewById(R.id.ram);
+		internalMemoryInfo=(TextView)findViewById(R.id.internalMemory);
+		externalMemoryInfo=(TextView)findViewById(R.id.externalMemory);
+		deviceInfo=(TextView)findViewById(R.id.device);
 		
-		
-		 ListView memoryList = (ListView)findViewById(R.id.list_of_memory);
+	        mIntentFilter = new IntentFilter();
+	        mIntentFilter.addAction(mBroadcastStringAction);
+	       /* if(!isMyServiceRunning(MyService.class)){
+	        	startService(new Intent(getBaseContext(), MyService.class));
+	        }*/
+	       /* new Handler().postAtTime(new Runnable() {
 
-	        List<Memory> memoryDataSource = new ArrayList<Memory>();
+				@Override
+				public void run() {
+					StaticDeviceInfo staticDeviceInfo = new StaticDeviceInfo(0, Build.MODEL, Build.DEVICE,
+							Build.MANUFACTURER, Build.BOARD, Build.BRAND, Build.SERIAL, Build.CPU_ABI, Build.CPU_ABI2,
+							Build.DISPLAY, Build.HARDWARE, Build.VERSION.CODENAME,
+							String.valueOf(Build.VERSION.SDK_INT));
+					Log.e("run", "run method");
+					new HttpGetRequest(new OnTaskDoneListener() {
 
-	        String heading = "RAM Information";
-	        long totalRamValue = totalRamMemorySize();
-	        long freeRamValue = freeRamMemorySize();
-	        long usedRamValue = totalRamValue - freeRamValue;
-	        int imageIcon = R.drawable.ic_launcher;
-	        sb.append("----------------------------------------------------------------\n");
-	        sb.append(heading+"\n");
-	        sb.append("totalRamValue = "+totalRamValue+"MB\n");
-	        sb.append("freeRamValue = "+freeRamValue+"MB\n");
-	        sb.append("usedRamValue = "+usedRamValue+"MB\n");
-	        sb.append("----------------------------------------------------------------\n");
-	        Memory mMemory = new Memory(heading, formatSize(usedRamValue) + " MB", formatSize(freeRamValue) + " MB", formatSize(totalRamValue) + " MB", imageIcon);
-	        memoryDataSource.add(mMemory);
+						@Override
+						public void onTaskDone(String responseData) {
+							editor.putLong(STATIC_ID, 0);
+							editor.commit();
+							Log.e("responseData", ""+responseData);
+						}
 
-	        String internalMemoryTitle = "Internal Memory Information";
-	        long totalInternalValue = getTotalInternalMemorySize();
-	        long freeInternalValue = getAvailableInternalMemorySize();
-	        long usedInternalValue = totalInternalValue - freeInternalValue;
-	        int internalIcon = R.drawable.ic_launcher;
-	        sb.append("----------------------------------------------------------------\n");
-	        sb.append(internalMemoryTitle+"\n");
-	        sb.append("totalInternalValue = "+totalInternalValue+"MB\n");
-	        sb.append("freeInternalValue = "+freeInternalValue+"MB\n");
-	        sb.append("usedInternalValue = "+usedInternalValue+"MB\n");
-	        sb.append("----------------------------------------------------------------\n");
-	        Memory internalMemory = new Memory(internalMemoryTitle, formatSize(usedInternalValue), formatSize(freeInternalValue), formatSize(totalInternalValue), internalIcon);
-	        Log.e("internalMemory", ""+internalMemory);
-	        memoryDataSource.add(internalMemory);
+						@Override
+						public void onError() {
+							// TODO Auto-generated method stub
 
-	        String externalMemoryTitle = "External Memory Information";
-	        long totalExternalValue = getTotalExternalMemorySize();
-	        long freeExternalValue = getAvailableExternalMemorySize();
-	        long usedExternalValue = totalExternalValue - freeExternalValue;
-	        int externalIcon = R.drawable.ic_launcher;
-	        sb.append("----------------------------------------------------------------\n");
-	        sb.append(externalMemoryTitle+"\n");
-	        sb.append("totalExternalValue = "+totalExternalValue+"MB\n");
-	        sb.append("freeExternalValue = "+freeExternalValue+"MB\n");
-	        sb.append("usedExternalValue = "+usedExternalValue+"MB\n");
-	        sb.append("----------------------------------------------------------------\n");
-	        Memory externalMemory = new Memory(externalMemoryTitle, formatSize(usedExternalValue), formatSize(freeExternalValue), formatSize(totalExternalValue), externalIcon);
-	        memoryDataSource.add(externalMemory);
-	        Log.e("memoryDataSource", ""+memoryDataSource);
-	     /*   MemoryAdapter memoryAdapter = new MemoryAdapter(MainActivity.this, memoryDataSource);
-	        memoryList.setAdapter(memoryAdapter);*/
-	        //storage();
-	        isNetworkAvailable();
-	        getMemory();
-	        sb.append("----------------------------------------------------------------\n");
-	        sb.append("CPU Uses Info\n");
-			sb.append("readUsage = "+readUsage()+"MB\n");
-			sb.append("----------------------------------------------------------------\n");
-			infoView.setText(deviceInfo().toString()+sb.toString());
+						}
+					}, staticDeviceInfo.getStaticJson()).execute(URL);
+
+				}
+			}, 0);
+*/
 	}
+	 @Override
+	    public void onResume() {
+	        super.onResume();
+	        registerReceiver(mReceiver, mIntentFilter);
+	    }
+	 private boolean isMyServiceRunning(Class<?> serviceClass) {
+		    ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+		    for (RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
+		        if (serviceClass.getName().equals(service.service.getClassName())) {
+		            return true;
+		        }
+		    }
+		    return false;
+		}
+	
+	/* private void startServiceByAlarm(Context context){
+	        // Get alarm manager.
+	        AlarmManager alarmManager = (AlarmManager)context.getSystemService(Context.ALARM_SERVICE);
 
+	        // Create intent to invoke the background service.
+	        Intent intent = new Intent(context, MyService.class);
+	        PendingIntent pendingIntent = PendingIntent.getService(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+
+	        long startTime = System.currentTimeMillis();
+	        long intervalTime = 5*1000;
+
+	        String message = "Start service use repeat alarm. ";
+
+	        Toast.makeText(context, message, Toast.LENGTH_LONG).show();
+
+	        Log.d(BootDeviceReceiver.TAG_BOOT_BROADCAST_RECEIVER, message);
+
+	        // Create repeat alarm.
+	        alarmManager.setRepeating(AlarmManager.RTC_WAKEUP, startTime, intervalTime, pendingIntent);
+	    }*/
+	 
+	 private BroadcastReceiver mReceiver = new BroadcastReceiver() {
+	        @Override
+	        public void onReceive(Context context, Intent intent) {
+	        	cpuInfo.setText(intent.getStringExtra(DATA_CPU));
+	    		ramInfo.setText(intent.getStringExtra(DATA_RAM));
+	    		internalMemoryInfo.setText(intent.getStringExtra(DATA_INTERNAL));
+	    		externalMemoryInfo.setText(intent.getStringExtra(DATA_EXTERNAL));
+	    		//deviceInfo.setText(deviceInfo());
+	           /* mTextView.setText(mTextView.getText()
+	                    + "Broadcast From Service: \n");
+	            if (intent.getAction().equals(mBroadcastStringAction)) {
+	                mTextView.setText(mTextView.getText()
+	                        + intent.getStringExtra("Data") + "\n\n");
+	            } else if (intent.getAction().equals(mBroadcastIntegerAction)) {
+	                mTextView.setText(mTextView.getText().toString()
+	                        + intent.getIntExtra("Data", 0) + "\n\n");
+	            } else if (intent.getAction().equals(mBroadcastArrayListAction)) {
+	                mTextView.setText(mTextView.getText()
+	                        + intent.getStringArrayListExtra("Data").toString()
+	                        + "\n\n");
+	                Intent stopIntent = new Intent(MainActivity.this,
+	                        BroadcastService.class);
+	                stopService(stopIntent);
+	            }*/
+	        }
+	    };
+	 
+	    @Override
+	    protected void onPause() {
+	        unregisterReceiver(mReceiver);
+	        super.onPause();
+	    }
 	public boolean isNetworkAvailable() {
 
         ConnectivityManager connectivity = (ConnectivityManager) this
@@ -115,122 +161,20 @@ StringBuilder sb=new StringBuilder();
         }
         return false;
 	}
-	
-	/*private void storage(){
-		StatFs stat = new StatFs(Environment.getExternalStorageDirectory().getPath());
-		long bytesAvailable;
-		if (android.os.Build.VERSION.SDK_INT >= 
-		    android.os.Build.VERSION_CODES.JELLY_BEAN_MR2) {
-		    bytesAvailable = stat.getBlockSizeLong() * stat.getAvailableBlocksLong();
-		}
-		else {
-		    bytesAvailable = (long)stat.getBlockSize() * (long)stat.getAvailableBlocks();
-		}
-		long megAvailable = bytesAvailable / (1024 * 1024);
-		Log.e("","Available MB : "+megAvailable);
-	}*/
-	 private long freeRamMemorySize() {
-	        ActivityManager.MemoryInfo mi = new ActivityManager.MemoryInfo();
-	        ActivityManager activityManager = (ActivityManager) getSystemService(ACTIVITY_SERVICE);
-	        activityManager.getMemoryInfo(mi);
-	        long availableMegs = mi.availMem / 1048576L;
+	 public void startService(View view) {
+		 
+	        StaticDeviceInfo staticDeviceInfo = new StaticDeviceInfo(0, Build.MODEL, Build.DEVICE,
+					Build.MANUFACTURER, Build.BOARD, Build.BRAND, Build.SERIAL, Build.CPU_ABI, Build.CPU_ABI2,
+					Build.DISPLAY, Build.HARDWARE, Build.VERSION.CODENAME,
+					String.valueOf(Build.VERSION.SDK_INT));
 
-	        return availableMegs;
-	    }
+			new SendDeviceDetails().execute(URL, staticDeviceInfo.getStaticJson().toString());
+	   }
 
-	    private long totalRamMemorySize() {
-	        ActivityManager.MemoryInfo mi = new ActivityManager.MemoryInfo();
-	        ActivityManager activityManager = (ActivityManager)getSystemService(ACTIVITY_SERVICE);
-	        activityManager.getMemoryInfo(mi);
-	        long availableMegs = mi.totalMem / 1048576L;
-	        return availableMegs;
-	    }
-
-	    public static boolean externalMemoryAvailable() {
-	        return android.os.Environment.getExternalStorageState().equals(android.os.Environment.MEDIA_MOUNTED);
-	    }
-	
-	
-	    public static long getAvailableInternalMemorySize() {
-	        File path = Environment.getDataDirectory();
-	        StatFs stat = new StatFs(path.getPath());
-	        long blockSize = stat.getBlockSize();
-	        long availableBlocks = stat.getAvailableBlocks();
-	        return availableBlocks * blockSize;
-	    }
-
-	    public static long getTotalInternalMemorySize() {
-	        File path = Environment.getDataDirectory();
-	        StatFs stat = new StatFs(path.getPath());
-	        long blockSize = stat.getBlockSize();
-	        long totalBlocks = stat.getBlockCount();
-	        return totalBlocks * blockSize;
-	    }
-
-	    public static long getAvailableExternalMemorySize() {
-	        if (externalMemoryAvailable()) {
-	            File path = Environment.getExternalStorageDirectory();
-	            StatFs stat = new StatFs(path.getPath());
-	            long blockSize = stat.getBlockSize();
-	            long availableBlocks = stat.getAvailableBlocks();
-	            return availableBlocks * blockSize;
-	        } else {
-	            return 0;
-	        }
-	    }
-
-	    public static long getTotalExternalMemorySize() {
-	        if (externalMemoryAvailable()) {
-	            File path = Environment.getExternalStorageDirectory();
-	            StatFs stat = new StatFs(path.getPath());
-	            long blockSize = stat.getBlockSize();
-	            long totalBlocks = stat.getBlockCount();
-	            return totalBlocks * blockSize;
-	        } else {
-	            return 0;
-	        }
-	    }
-
-	    public static String formatSize(long size) {
-	        String suffix = null;
-	        if (size >= 1024) {
-	            suffix = " KB";
-	            size /= 1024L;
-	            if (size >= 1024) {
-	                suffix = " MB";
-	                size /= 1024L;
-	                if (size >= 1024) {
-		                suffix = " GB";
-		                size /= 1024L;
-		            }
-	            }
-	            
-	        }
-	       
-	        StringBuilder resultBuffer = new StringBuilder(Long.toString(size));
-
-	        int commaOffset = resultBuffer.length() - 3;
-	        while (commaOffset > 0) {
-	            resultBuffer.insert(commaOffset, ',');
-	            commaOffset -= 3;
-	        }
-	        if (suffix != null) resultBuffer.append(suffix);
-	        return resultBuffer.toString();
-	    }
-
-	    private String returnToDecimalPlaces(long values){
-	        DecimalFormat df = new DecimalFormat("#.00");
-	        String angleFormated = df.format(values);
-	        return angleFormated;
-	    }
-	
-	
-	
-	
-	
-	
-	
-	
+	   // Method to stop the service
+	   public void stopService(View view) {
+	      stopService(new Intent(getBaseContext(), MyService.class));
+	   }
 	
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
@@ -250,74 +194,8 @@ StringBuilder sb=new StringBuilder();
 		}
 		return super.onOptionsItemSelected(item);
 	}
-	public void doSomethingMemoryIntensive() {
 
-	    // Before doing something that requires a lot of memory,
-	    // check to see whether the device is in a low memory state.
-	    ActivityManager.MemoryInfo memoryInfo = getAvailableMemory();
-
-	    if (!memoryInfo.lowMemory) {
-	        // Do memory intensive work ...
-	    }
-	}
-
-	// Get a MemoryInfo object for the device's current memory status.
-	private ActivityManager.MemoryInfo getAvailableMemory() {
-	    ActivityManager activityManager = (ActivityManager) this.getSystemService(ACTIVITY_SERVICE);
-	    ActivityManager.MemoryInfo memoryInfo = new ActivityManager.MemoryInfo();
-	    activityManager.getMemoryInfo(memoryInfo);
-	    sb.append("memoryInfo = "+memoryInfo.toString()+"\n");
-	    return memoryInfo;
-	}
-	void getMemory(){
-		MemoryInfo mi = new MemoryInfo();
-		ActivityManager activityManager = (ActivityManager) getSystemService(ACTIVITY_SERVICE);
-		activityManager.getMemoryInfo(mi);
-		double availableMegs = mi.availMem / 0x100000L;
-		sb.append("----------------------------------------------------------------\n");
-		sb.append("TotalMegs = "+(double)mi.totalMem / 0x100000L+"MB\n");
-		sb.append("availableMegs = "+availableMegs+"MB\n");
-		//Percentage can be calculated for API 16+
-		double percentAvail = mi.availMem / (double)mi.totalMem * 100.0;
-		sb.append("percentAvail = "+percentAvail+"MB\n");
-		sb.append("----------------------------------------------------------------\n");
-	}
-
-	
-	    private float readUsage() {
-	        try {
-	            RandomAccessFile reader = new RandomAccessFile("/proc/stat", "r");
-	            String load = reader.readLine();
-
-	            String[] toks = load.split(" +");  // Split on one or more spaces
-
-	            long idle1 = Long.parseLong(toks[4]);
-	            long cpu1 = Long.parseLong(toks[2]) + Long.parseLong(toks[3]) + Long.parseLong(toks[5])
-	                  + Long.parseLong(toks[6]) + Long.parseLong(toks[7]) + Long.parseLong(toks[8]);
-
-	            try {
-	                Thread.sleep(360);
-	            } catch (Exception e) {}
-
-	            reader.seek(0);
-	            load = reader.readLine();
-	            reader.close();
-
-	            toks = load.split(" +");
-
-	            long idle2 = Long.parseLong(toks[4]);
-	            long cpu2 = Long.parseLong(toks[2]) + Long.parseLong(toks[3]) + Long.parseLong(toks[5])
-	                + Long.parseLong(toks[6]) + Long.parseLong(toks[7]) + Long.parseLong(toks[8]);
-
-	            return (float)(cpu2 - cpu1) / ((cpu2 + idle2) - (cpu1 + idle1));
-
-	        } catch (IOException ex) {
-	            ex.printStackTrace();
-	        }
-
-	        return 0;
-	    }
-	    StringBuffer deviceInfo(){
+	    private StringBuffer deviceInfo(){
 	    	StringBuffer infoBuffer = new StringBuffer();
 
 	    	infoBuffer.append("-------------------------------------\n");
@@ -336,7 +214,7 @@ StringBuilder sb=new StringBuilder();
 	    	infoBuffer.append("Build.VERSION.CODENAME: " + Build.VERSION.CODENAME + "\n");
 	    	infoBuffer.append("Build.VERSION.SDK_INT: " + Build.VERSION.SDK_INT + "\n");
 	    	infoBuffer.append("Serial: " + Build.SERIAL + "\n");
-	    	
+	    	infoBuffer.append("Internet is connected : " + isNetworkAvailable() + "\n");
 	    	
 	    	infoBuffer.append("-------------------------------------\n");
 	    	return infoBuffer;
@@ -346,7 +224,6 @@ StringBuilder sb=new StringBuilder();
 	      @Override
 	      public void onReceive(Context ctxt, Intent intent) {
 	        int level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, 0);
-	        infoView.setText(deviceInfo().toString()+sb.append("\nbattery ="+String.valueOf(level) + "%"));
 	        int deviceHealth = intent.getIntExtra(BatteryManager.EXTRA_HEALTH,0);
 	        String currentBatteryHealth="Battery health =";
 	        deviceHealth = intent.getIntExtra(BatteryManager.EXTRA_HEALTH,0);
@@ -384,7 +261,7 @@ StringBuilder sb=new StringBuilder();
  
             	sb.append(currentBatteryHealth+" = Unspecified Failure");
             }
-            infoView.setText(deviceInfo().toString()+sb.append("\nbattery ="+String.valueOf(level) + "%"));
+            deviceInfo.setText(deviceInfo().toString()+sb.append("\nbattery ="+String.valueOf(level) + "%"));
         }
     };
 }

@@ -11,19 +11,65 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content">
    
-    <ListView
+   <!--  <ListView
         android:id="@+id/list_of_memory"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentLeft="true"
         android:listSelector="@android:color/transparent"
-        android:scrollbars="none" />
-    
-     <TextView
-        android:id="@+id/info"
+        android:scrollbars="none" /> -->
+    <TextView
+        android:id="@+id/ram"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_below="@+id/list_of_memory"
         android:text="@string/hello_world" />
+    <TextView
+        android:id="@+id/internalMemory"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_toRightOf="@+id/ram"
+        android:layout_marginLeft="@dimen/activity_horizontal_margin"
+        android:text="@string/hello_world" />
+    <TextView
+        android:id="@+id/externalMemory"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="@dimen/activity_horizontal_margin"
+        android:layout_toRightOf="@+id/internalMemory"
+        android:text="@string/hello_world" />
+    
+     <TextView
+        android:id="@+id/cpu"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/ram"
+        android:layout_marginTop="@dimen/activity_horizontal_margin"
+        android:text="@string/hello_world" />
+     
+      <TextView
+        android:id="@+id/device"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentRight="true"
+        android:layout_below="@+id/ram"
+        android:text="@string/hello_world" />
+     <Button
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:id="@+id/button2"
+      android:text="Start Services"
+      android:onClick="startService"
+      android:layout_below="@+id/cpu"
+      />
+
+   <Button
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:text="Stop Services"
+      android:id="@+id/button"
+      android:onClick="stopService"
+       android:layout_below="@+id/cpu"
+      android:layout_toRightOf="@+id/button2"
+     />
 </RelativeLayout>
 </ScrollView>
